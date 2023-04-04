@@ -1,0 +1,15 @@
+{
+    "username": "string",
+    "status": "string",
+    "bio": "string",
+    "avatarUrl": "url",
+    "followers": [ "string" ],
+    "following": [ "string" ],
+    "issues": [
+        {
+            "title": "string",
+            "state": "enum",
+            "createdAt": "date"
+        }
+    ]
+}
