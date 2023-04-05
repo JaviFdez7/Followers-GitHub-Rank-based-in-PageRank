@@ -1,5 +1,5 @@
 # MC01-GraphQL-PageRank and MC02-PageRank-CLI
-This app uses the GitHub API and GraphQL to get user information and calculate your PageRank from your list of followers. La aplicación está escrita en Node.js.
+This app uses the GitHub API and GraphQL to get user information and calculate your PageRank from your list of followers. the application is developed in Node.js.
 
 ## Environment setup
 1. Clone this repository
