@@ -6,6 +6,9 @@
     "type": "module",
     "private": true,
     "main": "index.js",
+    "bin": {
+        "github-pagerank": "./app.js"
+      },
     "scripts": {
         "prestart": "npm install --only=prod",
         "start": "node index.js"

@@ -74,23 +74,21 @@ async function _callGitHub(username,tokenIn){
     }
 
     export async function pageRank(username, d, p, tokenIn){
-        const user = await _callGitHub(username,tokenIn).then(async (usuario)=> {
-            const followers = usuario.followers;
-            const followersSize = followers.length; 
-            let i = 0;
-            let result = 0;
-            let resultArray = [];
-            for(i=0;i<followersSize;i++){
-              const useri = await _callGitHub(followers[i],tokenIn);
-              result = await pageRankRecursive(followers[i],d,p, 0, tokenIn)
-              const followerMap = new Map();
-              followerMap.set(useri.username, result);
-              resultArray.push(followerMap);
-              console.log(`${i}: ${followers[i]} = ${result}`)
-            }
-            console.log(resultArray);
-            return resultArray;
-        })
+        const user = await _callGitHub(username,tokenIn)
+        const followers = user.followers;
+        const followersSize = followers.length; 
+        let i = 0;
+        let result = 0;
+        let resultArray = [];
+        for(i=0;i<followersSize;i++){
+            const useri = await _callGitHub(followers[i],tokenIn);
+            result = await pageRankRecursive(followers[i],d,p, 0, tokenIn)
+            const followerArray = [];
+            followerArray.push(useri.username, result);
+            resultArray.push(followerArray);
+            console.log(`${i}: ${followers[i]} = ${result}`)
+          }
+        return resultArray;
     }
 
     async function pageRankRecursive(username, d, p, ac, tokenIn){
@@ -98,7 +96,7 @@ async function _callGitHub(username,tokenIn){
       const followers = usuario.followers;
       const followersSize = followers.length;
       let pageRankSum = 0; // Creamos una variable para almacenar la sumatoria de los PageRank de los followers
-      if(p==0 || followersSize==0){
+      if(p==0 || followersSize==0){ // Caso base -> profundidad máxima alcanzada o el usuario que estamos buscando tiene 0 followers
         return (1-d)
       }else {
         for(let i=0; i<followersSize; i++){
