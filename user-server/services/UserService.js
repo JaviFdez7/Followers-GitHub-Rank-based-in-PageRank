@@ -1,19 +1,42 @@
 import axios from 'axios';
+import User from "../models/User.js";
+import PageRankFollowers from "../models/PageRankFollowers.js";
 
 export function getUsers(req, res) {
-    res.send({
-        message: 'This is the mockup controller for getUsers'
-    });
+  User.find().then((users) => {
+    res.send(users);
+  }).catch(err => {
+    res.send({message: err.message});
+  });
 }
 
 export function findByusername(req, res) {
     const username = res.locals.oas.params.username;
-    pageRank(username, 0.85, 1, tokenPred);
     _callGitHub(username, tokenPred).then((usuario) => {
       res.send(usuario);
     }).catch(err => {
       res.status(500).send({message: err.message});
     });
+  }
+
+  export async function createUser(req, res) {
+    try {
+      const username = res.locals.oas.params.username;
+      const usuario = await _callGitHub(username, tokenPred);
+      const user = await User.create(usuario);
+      res.status(201).send(user);
+    } catch (err) {
+      res.status(500).send({ message: "Error al crear usuario: " + err.message });
+    }
+  }
+  
+
+  export function createPageRankComputation(req, res){
+
+  }
+
+  export function getFollowersRankingByComputationId(req, res){
+
   }
 
 const tokenPred = "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"
@@ -50,12 +73,12 @@ async function _callGitHub(username,tokenIn){
       }`
 
       const result = await axios.post(apiUrl, { query }, { headers: requestConfig });
-
+      
       if (result) {
         const userData = result.data.data.user;
             const usuario = {
             username: username,
-            status: userData.status,
+            status: userData.status ? userData.status.message : null,
             bio: userData.bio,
             avatarUrl: userData.avatarUrl,
             followers: userData.followers.nodes.map(follower => follower.login),
@@ -83,9 +106,7 @@ async function _callGitHub(username,tokenIn){
         for(i=0;i<followersSize;i++){
             const useri = await _callGitHub(followers[i],tokenIn);
             result = await pageRankRecursive(followers[i],d,p, 0, tokenIn)
-            const followerArray = [];
-            followerArray.push(useri.username, result);
-            resultArray.push(followerArray);
+            resultArray.push({username: useri.username, score: result});
             console.log(`${i}: ${followers[i]} = ${result}`)
           }
         return resultArray;
@@ -103,7 +124,11 @@ async function _callGitHub(username,tokenIn){
           const useri = await _callGitHub(followers[i],tokenIn);
           const followingOfi = useri.following.length;
           const followerPageRank = await pageRankRecursive(followers[i], d, p-1,ac, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
-          pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower a la sumatoria
+          if(followingOfi==0){
+            pageRankSum += followerPageRank/1; // Si no sigue a nadie (hay admins en github que no siguen a nadie, pero la gente les sigue)
+          }else {
+            pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower a la sumatoria
+          }
         };
         const pageRank = (1-d) + d*(pageRankSum); // Calculamos el PageRank del usuario actual usando la sumatoria de los PageRank de los followers
         return pageRank;

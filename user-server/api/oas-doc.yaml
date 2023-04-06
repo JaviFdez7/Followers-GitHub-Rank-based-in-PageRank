@@ -5,6 +5,65 @@ info:
   description: GH Users information 
 
 paths:
+  /api/v1/followersRanking/{username}:
+      x-router-controller: UserController
+      post:
+        description: Starts a PageRank computation in the background and returns a computationId
+        operationId: createPageRankComputation
+        parameters:
+          - required: true
+            name: username
+            description: Username of the user to compute PageRank for
+            in: path
+            schema:
+              type: string
+          - required: false
+            name: depth
+            description: Depth of calculation to perform
+            in: query
+            schema:
+              type: integer
+          - required: false
+            name: damping
+            description: Damping factor for the PageRank algorithm
+            in: query
+            schema:
+              type: number
+        responses:
+          200:
+            description: Computation started successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    computationId:
+                      type: string
+  /api/v1/followersRanking/{computationId}:
+      x-router-controller: UserController
+      get:
+        description: Returns the followersRanking results from computationId 
+        operationId: getFollowersRankingByComputationId
+        parameters:
+          - required: true
+            name: computationId
+            description: computationId of the followersRanking computation
+            in: path
+            schema:
+              type: string
+        responses:
+          200:
+            description: User followers ranking
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/followersRanking'
+          default:
+            description: Unexpected error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/error'
   /api/v1/users:
     x-router-controller: UserController
     get:
@@ -50,9 +109,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error'
-
+    post:
+      description: Creates an user
+      operationId: createUser
+      parameters:
+        - required: true
+          name: username
+          description: username of the user to create
+          in: path
+          schema:
+            type: string
+      responses:
+        201:
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/user'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
 components:
   schemas:
+    followersRanking:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [IN_PROGRESS, COMPLETED, FAILED]
+        params:
+          type: object
+          properties:
+            username:
+              type: string
+            depth:
+              type: integer
+            damping_factor:
+              type: number
+          required:
+            - username
+            - depth
+            - damping_factor
+        result:
+          type: array
+          items:
+            type: object
+            properties:
+              username:
+                type: string
+              score:
+                type: number
+          nullable: true
+      required:
+        - status
+        - params
     user:
         type: object
         required:

@@ -33,4 +33,4 @@ program
 
 program.parse(process.argv);
 
-/*node app.js joszamama -d 0.85 -p 1 -t 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 -o hola1.txt*/
+/*github-pagerank joszamama -d 0.85 -p 1 -t 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 -o hola1.txt*/
