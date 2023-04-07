@@ -2,23 +2,26 @@
 import { pageRank } from './services/UserService.js';
 import { program } from 'commander';
 import fs from 'fs';
+import dotenv from 'dotenv';
+dotenv.config();
 
 
 program
   .arguments('<username>')
   .description('Calculates PageRank for a given user on GitHub')
   .option('-d, --damping-factor <dampingFactor>', 'Damping factor (default: 0.85)')
-  .option('-p, --precision <precision>', 'Precision of the PageRank calculation (default: 3)')
+  .option('-p, --depth <depth>', 'Depth of the PageRank calculation (default: 3)')
   .option('-t, --token <token>', 'GitHub personal access token')
   .option('-o, --output <f>', 'Write the results to the specified file instead of stdout')
   .helpOption('-h, --help', 'Display this page')
   .addHelpText('after', '\nExamples:\n  $ node app.js joszamama\n  $ node app.js joszamama -d 0.85 -p 1 -t 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 -o hola1.txt\n')
   .action(async function(username, options) {
     const dampingFactor = options.dampingFactor || 0.85;
-    const precision = options.precision || 3;
-    const token = options.token;
-    console.log(`\nCalculating PageRank of ${username} with damping factor ${dampingFactor} and precision ${precision} to ${options.output? options.output : 'stdout'}...\n`);
-    const rankingFollowers = await pageRank(username, dampingFactor, precision, token);
+    const depth = options.depth || 3;
+    const tokenPred = process.env.TOKEN;
+    const token = options.token || tokenPred;
+    console.log(`\nCalculating PageRank of ${username} with damping factor ${dampingFactor} and depth ${depth} to ${options.output? options.output : 'stdout'}...\n`);
+    const rankingFollowers = await pageRank(username, dampingFactor, depth, token);
     if (options.output) {
       const data = JSON.stringify(Array.from(rankingFollowers.entries()), null, 2);
       console.log("\nFinished\n");

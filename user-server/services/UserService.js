@@ -1,7 +1,13 @@
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 import User from "../models/User.js";
 import PageRankFollowers from "../models/PageRankFollowers.js";
+import dotenv from 'dotenv';
+dotenv.config();
 
+const tokenPred = process.env.TOKEN;
+
+//Shows all users published in the mongo database
 export function getUsers(req, res) {
   User.find().then((users) => {
     res.send(users);
@@ -10,6 +16,7 @@ export function getUsers(req, res) {
   });
 }
 
+//Find a user in the github API by username
 export function findByusername(req, res) {
     const username = res.locals.oas.params.username;
     _callGitHub(username, tokenPred).then((usuario) => {
@@ -19,6 +26,9 @@ export function findByusername(req, res) {
     });
   }
 
+  //TODO Find a user by username in the mongo database
+
+  //Create a user by searching for it on Github by username and it will be published to the mongo database
   export async function createUser(req, res) {
     try {
       const username = res.locals.oas.params.username;
@@ -26,21 +36,66 @@ export function findByusername(req, res) {
       const user = await User.create(usuario);
       res.status(201).send(user);
     } catch (err) {
-      res.status(500).send({ message: "Error al crear usuario: " + err.message });
+      res.status(500).send({ message: "Error creating user: " + err.message });
+    }
+  }
+
+  //PageRank async post in mongo database
+  export async function createPageRankComputation(req, res) {
+    try {
+      const username = res.locals.oas.params.username;
+      const dampingFactor = res.locals.oas.params.dampingfactor || 0.85;
+      const depth = res.locals.oas.params.depth || 3;
+      const computationId = uuidv4(); 
+      await PageRankFollowers.create({
+        computationId: computationId,
+        status: "IN_PROGRESS",
+        params: { username: username, dampingfactor: dampingFactor, depth: depth },
+        result: []
+      });
+      res.status(201).send({computationId: computationId});
+      console.log(`ComputationId send: ${computationId}`);
+      try {
+        console.log("PageRank in progress");
+  
+        await PageRankFollowers.updateOne(
+          { computationId: computationId },
+          {
+            $set: {
+              status: "COMPLETED",
+              params: { username: username, dampingfactor: dampingFactor, depth: depth },
+              result: await pageRank(username, dampingFactor, depth, tokenPred) 
+            }
+          }
+        );
+        console.log("Completed and updated");
+      } catch (error) {
+        console.log("Error updating the instance of PageRankFollowers: " + error);
+      }
+    } catch (err) {
+      res.status(500).send({ message: "Error creating the instance of PageRankFollowers: " + err.message });
+    }
+  }
+  
+  
+  //PageRank async get by computationId from mongo database
+  export async function getFollowersRankingByComputationId(req, res){
+    try {
+      const computationId = res.locals.oas.params.computationId;
+      const pageRankFollowers = await PageRankFollowers.findOne({ computationId: computationId });
+      if (pageRankFollowers) {
+        const ranking = pageRankFollowers;
+        res.status(200).send(ranking);
+      } else {
+        res.status(404).send({ message: "No PageRank calculation found for the specified computatioId" });
+      }
+    } catch (err) {
+      res.status(500).send({ message: "Error getting followers ranking: " + err.message });
     }
   }
   
 
-  export function createPageRankComputation(req, res){
-
-  }
-
-  export function getFollowersRankingByComputationId(req, res){
-
-  }
-
-const tokenPred = "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"
-
+//User info from graphQL 
 async function _callGitHub(username,tokenIn){
     const token = tokenIn;
     const apiUrl = 'https://api.github.com/graphql';
@@ -96,25 +151,25 @@ async function _callGitHub(username,tokenIn){
       } 
     }
 
+
+    //PageRank recursive function 
     export async function pageRank(username, d, p, tokenIn){
         const user = await _callGitHub(username,tokenIn)
         const followers = user.followers;
         const followersSize = followers.length; 
-        let i = 0;
         let result = 0;
         let resultArray = [];
-        for(i=0;i<followersSize;i++){
+        for(let i=0;i<followersSize;i++){
             const useri = await _callGitHub(followers[i],tokenIn);
-            result = await pageRankRecursive(followers[i],d,p, 0, tokenIn)
+            result = await pageRankRecursive(useri,d,p, tokenIn)
             resultArray.push({username: useri.username, score: result});
             console.log(`${i}: ${followers[i]} = ${result}`)
           }
         return resultArray;
     }
 
-    async function pageRankRecursive(username, d, p, ac, tokenIn){
-      const usuario = await _callGitHub(username,tokenIn);
-      const followers = usuario.followers;
+    async function pageRankRecursive(user, d, p, tokenIn){
+      const followers = user.followers;
       const followersSize = followers.length;
       let pageRankSum = 0; // Creamos una variable para almacenar la sumatoria de los PageRank de los followers
       if(p==0 || followersSize==0){ // Caso base -> profundidad máxima alcanzada o el usuario que estamos buscando tiene 0 followers
@@ -123,9 +178,9 @@ async function _callGitHub(username,tokenIn){
         for(let i=0; i<followersSize; i++){
           const useri = await _callGitHub(followers[i],tokenIn);
           const followingOfi = useri.following.length;
-          const followerPageRank = await pageRankRecursive(followers[i], d, p-1,ac, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
+          const followerPageRank = await pageRankRecursive(useri, d, p-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
           if(followingOfi==0){
-            pageRankSum += followerPageRank/1; // Si no sigue a nadie (hay admins en github que no siguen a nadie, pero la gente les sigue)
+            pageRankSum += followerPageRank/1; // Si no sigue a nadie (hay admins en github que no siguen a nadie, pero pero aparecen en los seguidores de algunos usuarios)
           }else {
             pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower a la sumatoria
           }

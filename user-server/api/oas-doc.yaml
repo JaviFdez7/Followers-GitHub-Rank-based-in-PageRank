@@ -3,67 +3,7 @@ info:
   version: 1.0.0
   title: GH Users
   description: GH Users information 
-
 paths:
-  /api/v1/followersRanking/{username}:
-      x-router-controller: UserController
-      post:
-        description: Starts a PageRank computation in the background and returns a computationId
-        operationId: createPageRankComputation
-        parameters:
-          - required: true
-            name: username
-            description: Username of the user to compute PageRank for
-            in: path
-            schema:
-              type: string
-          - required: false
-            name: depth
-            description: Depth of calculation to perform
-            in: query
-            schema:
-              type: integer
-          - required: false
-            name: damping
-            description: Damping factor for the PageRank algorithm
-            in: query
-            schema:
-              type: number
-        responses:
-          200:
-            description: Computation started successfully
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    computationId:
-                      type: string
-  /api/v1/followersRanking/{computationId}:
-      x-router-controller: UserController
-      get:
-        description: Returns the followersRanking results from computationId 
-        operationId: getFollowersRankingByComputationId
-        parameters:
-          - required: true
-            name: computationId
-            description: computationId of the followersRanking computation
-            in: path
-            schema:
-              type: string
-        responses:
-          200:
-            description: User followers ranking
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/followersRanking'
-          default:
-            description: Unexpected error
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/error'
   /api/v1/users:
     x-router-controller: UserController
     get:
@@ -132,6 +72,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error'
+  /api/v1/followersRanking/{username}:
+      x-router-controller: UserController
+      post:
+        description: Starts a PageRank computation in the background and returns a computationId
+        operationId: createPageRankComputation
+        parameters:
+          - required: true
+            name: username
+            description: Username of the user to compute PageRank for
+            in: path
+            schema:
+              type: string
+          - required: false
+            name: depth
+            description: Depth of calculation to perform (default = 3)
+            in: query
+            schema:
+              type: integer
+          - required: false
+            name: dampingfactor
+            description: Damping factor for the PageRank algorithm (default = 0.85)
+            in: query
+            schema:
+              type: number
+        responses:
+          201:
+            description: Computation started successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    computationId:
+                      type: string
+  /api/v1/followersRanking/{computationId}:
+    x-router-controller: UserController
+    get:
+      description: Returns the followersRanking results from computationId 
+      operationId: getFollowersRankingByComputationId
+      parameters:
+        - required: true
+          name: computationId
+          description: computationId of the followersRanking computation
+          in: path
+          schema:
+            type: string
+      responses:
+        200:
+          description: User followers ranking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/followersRanking'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
 components:
   schemas:
     followersRanking:
@@ -145,14 +144,14 @@ components:
           properties:
             username:
               type: string
+            dampingfactor:
+              type: number
             depth:
               type: integer
-            damping_factor:
-              type: number
           required:
             - username
+            - dampingfactor
             - depth
-            - damping_factor
         result:
           type: array
           items:
