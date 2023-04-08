@@ -4,8 +4,12 @@ export function getUsers(req, res) {
     service.getUsers(req, res);
 }
 
-export function findByusername(req, res) {
-    service.findByusername(req, res);
+export function findInGithubByUsername(req, res) {
+    service.findInGithubByUsername(req, res);
+}
+
+export function findByUsername(req, res) {
+    service.findByUsername(req, res);
 }
 
 export function createUser(req, res) {

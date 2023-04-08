@@ -1,13 +1,38 @@
 openapi: 3.0.3
 info:
-  version: 1.0.0
-  title: GH Users
-  description: GH Users information 
+  version: 2.0.0
+  title: GitHub Users and Followers Ranking
+  description: Make use of this API to find out your most influential followers on GitHub thanks to the implementation of an algorithm based on PageRank that classifies a user's followers, showing the most popular ones with the highest results.
 paths:
+  /api/v1/users/github/{username}:
+      x-router-controller: UserController
+      get:
+        description: Returns a single user by its username from github API
+        operationId: findInGithubByUsername
+        parameters:
+          - required: true
+            name: username
+            description: username of the user to fetch
+            in: path
+            schema:
+              type: string
+        responses:
+          200:
+            description: User found by username
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/user'
+          default:
+            description: Unexpected error
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/error'
   /api/v1/users:
     x-router-controller: UserController
     get:
-      description: Returns all users
+      description: Returns all users from mongo database
       operationId: getUsers
       responses:
         200:
@@ -26,31 +51,8 @@ paths:
                 $ref: '#/components/schemas/error'
   /api/v1/users/{username}:
     x-router-controller: UserController
-    get:
-      description: Returns a single user by its username
-      operationId: findByusername
-      parameters:
-        - required: true
-          name: username
-          description: username of the user to fetch
-          in: path
-          schema:
-            type: string
-      responses:
-        200:
-          description: User found by username
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/user'
-        default:
-          description: Unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error'
     post:
-      description: Creates an user
+      description: Create existing user in github API in mongo database 
       operationId: createUser
       parameters:
         - required: true
@@ -72,10 +74,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error'
+    get:
+      description: Returns a single user by its username from mongo database
+      operationId: findByUsername
+      parameters:
+        - required: true
+          name: username
+          description: username of the user to fetch
+          in: path
+          schema:
+            type: string
+      responses:
+        200:
+          description: User found by username
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/user'
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
   /api/v1/followersRanking/{username}:
       x-router-controller: UserController
       post:
-        description: Starts a PageRank computation in the background and returns a computationId
+        description: Starts a PageRank for the given user in the background and return a computationId
         operationId: createPageRankComputation
         parameters:
           - required: true
@@ -138,7 +163,7 @@ components:
       properties:
         status:
           type: string
-          enum: [IN_PROGRESS, COMPLETED, FAILED]
+          enum: [IN_PROGRESS, COMPLETED]
         params:
           type: object
           properties:
@@ -180,6 +205,7 @@ components:
             type: string
           status:
             type: string
+            nullable: true
           bio:
             type: string
           avatarUrl:
@@ -210,7 +236,6 @@ components:
                 createdAt:
                   type: string
                   format: date-time
-
     error:
       type: object
       required:

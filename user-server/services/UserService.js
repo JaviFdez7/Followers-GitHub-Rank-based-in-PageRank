@@ -16,8 +16,18 @@ export function getUsers(req, res) {
   });
 }
 
+//Find a user by username in the mongo database
+export function findByUsername(req, res) {
+  const username = res.locals.oas.params.username;
+  User.findOne({username}).then((usuario) => {
+    res.send(usuario)
+  }).catch(err => {
+    res.status(500).send({message: err.message});
+  });
+}
+
 //Find a user in the github API by username
-export function findByusername(req, res) {
+export function findInGithubByUsername(req, res) {
     const username = res.locals.oas.params.username;
     _callGitHub(username, tokenPred).then((usuario) => {
       res.send(usuario);
@@ -25,8 +35,6 @@ export function findByusername(req, res) {
       res.status(500).send({message: err.message});
     });
   }
-
-  //TODO Find a user by username in the mongo database
 
   //Create a user by searching for it on Github by username and it will be published to the mongo database
   export async function createUser(req, res) {
@@ -182,7 +190,7 @@ async function _callGitHub(username,tokenIn){
           if(followingOfi==0){
             pageRankSum += followerPageRank/1; // Si no sigue a nadie (hay admins en github que no siguen a nadie, pero pero aparecen en los seguidores de algunos usuarios)
           }else {
-            pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower a la sumatoria
+            pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower al sumatoria y dividimos entre su las personas a las que sigue
           }
         };
         const pageRank = (1-d) + d*(pageRankSum); // Calculamos el PageRank del usuario actual usando la sumatoria de los PageRank de los followers
