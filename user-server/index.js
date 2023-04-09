@@ -1,33 +1,19 @@
-import http from "http";
-import express from "express";
-import { initialize, use } from "@oas-tools/core";
-import { connectDB } from "./db.js";
+import server from './server.js';
 
+const env = process.env.NODE_ENV ?? "production";
 
-const serverPort = 8080;
-const app = express();
-app.use(express.json({ limit: '50mb' }));
+server.deploy(env).catch((err) => console.log(err));
 
-const config = {
-    middleware: {
-        security: {
-            auth: {
-            }
-        }
-    }
-}
-const mongoUrl = "mongodb://127.0.0.1:27017/test";
-
-connectDB(mongoUrl).then(() => {
-    use((req, res, next) => {res.setHeader("Content-Type","application/json"); next();}, {}, 0);
-    initialize(app, config).then(() => {
-        http.createServer(app).listen(serverPort, () => {
-            console.log("\nApp running at http://localhost:" + serverPort);
-            console.log("________________________________________________________________");
-            if (!config?.middleware?.swagger?.disable) {
-                console.log('API docs (Swagger UI) available on http://localhost:' + serverPort + '/docs');
-                console.log("________________________________________________________________");
-            }
-        });
-    });
+process.on('SIGINT', function onSigint () {
+    console.log("Graceful shutdown");
+    shutdown();
 });
+
+process.on('SIGINT', function onSigterm () {
+    console.log("Graceful shutdown");
+    shutdown();
+});
+
+const shutdown = () => {
+    server.undeploy();
+};

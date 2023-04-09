@@ -1,0 +1,26 @@
+version: '2.2'
+services:
+  gh-users:
+    depends_on: [db]
+    image: gh-users:latest
+    ports:
+      - 8080:8080
+    environment:
+      - MONGO_URL=mongodb://db:27017/test
+      - TOKEN=${TOKEN}
+    networks:
+      - gh-users-network
+  db:
+    image: mongo:latest
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    networks:
+      - gh-users-network
+
+volumes:
+  mongo_data: null
+  mongo_config: null
+
+networks:
+  gh-users-network: null
