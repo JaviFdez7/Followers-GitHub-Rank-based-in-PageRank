@@ -1,6 +1,6 @@
 import http from "http";
 import express from "express";
-import { initialize } from "@oas-tools/core";
+import { initialize, use } from "@oas-tools/core";
 import { connectDB } from "./db.js";
 
 
@@ -19,6 +19,7 @@ const config = {
 const mongoUrl = "mongodb://127.0.0.1:27017/test";
 
 connectDB(mongoUrl).then(() => {
+    use((req, res, next) => {res.setHeader("Content-Type","application/json"); next();}, {}, 0);
     initialize(app, config).then(() => {
         http.createServer(app).listen(serverPort, () => {
             console.log("\nApp running at http://localhost:" + serverPort);

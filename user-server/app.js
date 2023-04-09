@@ -14,7 +14,7 @@ program
   .option('-t, --token <token>', 'GitHub personal access token')
   .option('-o, --output <f>', 'Write the results to the specified file instead of stdout')
   .helpOption('-h, --help', 'Display this page')
-  .addHelpText('after', '\nExamples:\n  $ node app.js joszamama\n  $ node app.js joszamama -d 0.85 -p 1 -t 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 -o hola1.txt\n')
+  .addHelpText('after', '\nExamples:\n  github-pagerank joszamama\n  github-pagerank joszamama -d 0.85 -p 1 -t <generated-token> -o hola1.txt\n')
   .action(async function(username, options) {
     const dampingFactor = options.dampingFactor || 0.85;
     const depth = options.depth || 3;
@@ -35,5 +35,3 @@ program
 
 
 program.parse(process.argv);
-
-/*github-pagerank joszamama -d 0.85 -p 1 -t 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 -o hola1.txt*/
