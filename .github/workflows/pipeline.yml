@@ -16,9 +16,9 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: '14.x'
+    - name: Set up environment variables
+      run: echo "API_KEY=${{ secrets.TOKEN }}" >> $GITHUB_ENV
     - name: Install dependencies
       run: cd user-server && npm install
-    - name: Load environment variables
-      run: cd user-server && npx dotenv node -e "console.log(require('dotenv').config().parsed)"
     - name: Run tests
       run: cd user-server && npm test
