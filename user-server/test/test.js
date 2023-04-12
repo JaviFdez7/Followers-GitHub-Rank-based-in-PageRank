@@ -8,7 +8,7 @@ describe('PageRank function', () => {
     const username = 'JaviFdez7';
     const dampingFactor = 0.85;
     const depth = 1;
-    const token = "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";
+    const token = process.env.TOKEN;
     const result = await pageRank(username, dampingFactor, depth, token);
     assert.notStrictEqual(result, null);
   }).timeout(20000);

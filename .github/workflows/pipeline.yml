@@ -17,7 +17,7 @@ jobs:
       with:
         node-version: '14.x'
     - name: Set up environment variables
-      run: echo "API_KEY=${{ secrets.TOKEN }}" >> $GITHUB_ENV
+      run: echo "TOKEN=${{ secrets.TOKEN }}" >> $GITHUB_ENV
     - name: Install dependencies
       run: cd user-server && npm install
     - name: Run tests
