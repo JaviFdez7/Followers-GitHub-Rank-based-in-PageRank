@@ -18,5 +18,7 @@ jobs:
         node-version: '14.x'
     - name: Install dependencies
       run: cd user-server && npm install
+    - name: Load environment variables
+      run: npx dotenv --silent -- node -e "console.log(require('dotenv').config().parsed)"
     - name: Run tests
       run: cd user-server && npm test
