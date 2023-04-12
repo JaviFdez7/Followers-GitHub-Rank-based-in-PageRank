@@ -69,5 +69,214 @@ npm start
 ```
 Open the finished link in docs shown in the console. This will open a link in your browser that will look like swagger. There you will have all the available functions offered by the API with all its features described.
 
+
+# MC04-Despliegue-con-Docker-Compose
+*These steps will be done in the root folder of the project and with docker compose open.*
+
+We create the .env file in the root of the project that will be used to start our server and enter the following:
+```
+TOKEN=<your-github-token>
+```
+And now we start the server with the following command
+```
+docker-compose --env-file .env up -d
+```
+Now the application will be usable thanks to docker compose, every time you want to use the application just open docker-compose and run the container in which our deployment is hosted
+
+
+# MC05-BlueJay-y-SLAs
+First we access the bluejay-infrastructure folder and create a new .env file with the following information. The only one that needs to be entered is the personal github token:
+
+
+```
+GOV_INFRASTRUCTURE=http://host.docker.internal:5200/api/v1/public/infrastructure-local.yaml
+NODE_ENV=development
+
+# Repository branch that will be cloned into assetsmanager
+ASSETS_REPOSITORY_BRANCH=develop
+
+# Influx database url
+INFLUX_URL=http://host.docker.internal:5002
+
+# EVENT COLLECTOR
+KEY_GITHUB=<your-github-token>
+
+# FRONTENDS ACCESS ACCOUNT
+USER_RENDER=a
+PASS_RENDER=a
+USER_ASSETS=a
+PASS_ASSETS=a
+
+# ASSETS MANAGER
+KEY_ASSETS_MANAGER_PRIVATE=bluejay-assets-private-key
+
+# SCOPE MANAGER
+KEY_SCOPE_MANAGER=bluejay-scopes-private-key
+
+# COMPOSE CONFIG
+COMPOSE_HTTP_TIMEOUT=200
+```
+
+We carry out the deployment with the following command inside the bluejay-infrastructure directory:
+```
+docker-compose -f docker-bluejay/docker-compose-local.yaml --env-file .env up -d
+```
+
+Now, we have access to the bluejay infrastructure
+
+Copy this in your browser: localhost:5100
+
+And introduce de user: a; password: a;
+
+POSTMAN COMAND: 
+```
+DELETE
+http://localhost:5400/api/v6/agreements/tpa-project01
+```
+```
+POST
+http://localhost:5400/api/v6/agreements
+
+Body raw JSON:
+{
+    "id": "tpa-project01",
+    "version": "1.0.0",
+    "type": "agreement",
+    "context": {
+        "validity": {
+            "initial": "2019-01-01",
+            "timeZone": "America/Los_Angeles"
+        },
+        "definitions": {
+            "schemas": {},
+            "dashboards": {
+                "main": {
+                    "base": "http://host.docker.internal:5200/api/v1/public/grafana-dashboards/tpa/base.json",
+                    "modifier": "http://host.docker.internal:5200/api/v1/public/grafana-dashboards/tpa/modifier.js",
+                    "overlay": "http://host.docker.internal:5200/api/v1/public/grafana-dashboards/tpa/overlay.js",
+                    "config": {}
+                }
+            },
+            "scopes": {
+                "development": {
+                    "project": {
+                        "name": "Project",
+                        "description": "Project",
+                        "type": "string",
+                        "default": "project01"
+                    },
+                    "class": {
+                        "name": "Class",
+                        "description": "Group some projects",
+                        "type": "string",
+                        "default": "template"
+                    }
+                }
+            },
+            "collectors": {
+                "eventcollector": {
+                    "infrastructurePath": "internal.collector.events",
+                    "endpoint": "/api/v2/computations",
+                    "type": "POST-GET-V1",
+                    "config": {
+                        "scopeManager": "http://host.docker.internal:5700/api/v1/scopes/development"
+                    }
+                }
+            }
+        }
+    },
+    "terms": {
+        "metrics": {
+            "NUMBER_GITHUB_PR": {
+                "collector": {
+                    "infrastructurePath": "internal.collector.events",
+                    "endpoint": "/api/v2/computations",
+                    "type": "POST-GET-V1",
+                    "config": {
+                        "scopeManager": "http://host.docker.internal:5700/api/v1/scopes/development"
+                    }
+                },
+                "measure": {
+                    "computing": "actual",
+                    "element": "number",
+                    "event": {
+                        "github": {
+                            "allPR": {}
+                        }
+                    },
+                    "scope": {
+                        "project": {
+                            "name": "Project",
+                            "description": "Project",
+                            "type": "string",
+                            "default": "project01"
+                        },
+                        "class": {
+                            "name": "Class",
+                            "description": "Group some projects",
+                            "type": "string",
+                            "default": "template"
+                        }
+                    }
+                }
+            }
+        },
+        "guarantees": [
+            {
+                "id": "NUMBER_GH_PR_DAILY_OVER_1_OR_EQUAL",
+                "notes": "#### Description\r\n```\r\nTP-1: At least PR within a week.",
+                "description": "At least 1 PR within a week.",
+                "scope": {
+                    "project": {
+                        "name": "Project",
+                        "description": "Project",
+                        "type": "string",
+                        "default": "project01"
+                    },
+                    "class": {
+                        "name": "Class",
+                        "description": "Group some projects",
+                        "type": "string",
+                        "default": "template"
+                    }
+                },
+                "of": [
+                    {
+                        "scope": {
+                            "project": "project01"
+                        },
+                        "objective": "NUMBER_GITHUB_PR >= 1",
+                        "with": {
+                            "NUMBER_GITHUB_PR": {}
+                        },
+                        "window": {
+                            "type": "static",
+                            "period": "weekly",
+                            "initial": "2018-01-01"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
+```
+
+Dashboard user and password:
+
+User: governify-admin
+
+Password: governify-project
+
+
+# OC01-Tests-y-CI
+
+Unit tests have been created with Mocha. If you access the user-server directory and execute the following command you will be able to pass the tests manually:
+
+```
+npx mocha test/test.js
+```
+
+
 ---
 made by [JaviFdez7](https://github.com/JaviFdez7) 
