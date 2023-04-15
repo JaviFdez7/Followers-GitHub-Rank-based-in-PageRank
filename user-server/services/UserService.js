@@ -41,7 +41,16 @@ export function findInGithubByUsername(req, res) {
     try {
       const username = res.locals.oas.params.username;
       const usuario = await _callGitHub(username, tokenPred);
-      const user = await User.create(usuario);
+      const user = await User.create({
+        username: usuario.username,
+        status: usuario.status ? usuario.status.message : null,
+        bio: usuario.bio,
+        avatarUrl: usuario.avatarUrl,
+        followers: usuario.followers,
+        following: usuario.following,
+        issues: usuario.issues,
+        followersRank: []
+      });      
       res.status(201).send(user);
     } catch (err) {
       res.status(500).send({ message: "Error creating user: " + err.message });
@@ -59,7 +68,12 @@ export function findInGithubByUsername(req, res) {
         computationId: computationId,
         status: "IN_PROGRESS",
         params: { username: username, dampingfactor: dampingFactor, depth: depth },
-        result: []
+        result: [{
+          depth: 0,
+          dampingfactor: dampingFactor,
+          date: new Date(),
+          score: 0.15
+        }]
       });
       res.status(201).send({computationId: computationId});
       console.log(`ComputationId send: ${computationId}`);
@@ -161,41 +175,148 @@ async function _callGitHub(username,tokenIn){
 
 
     //PageRank recursive function 
-    export async function pageRank(username, d, p, tokenIn){
+    export async function pageRank(username, df, depth, tokenIn){
         const user = await _callGitHub(username,tokenIn)
         const followers = user.followers;
         const followersSize = followers.length; 
         let result = 0;
         let resultArray = [];
         for(let i=0;i<followersSize;i++){
-            const useri = await _callGitHub(followers[i],tokenIn);
-            result = await pageRankRecursive(useri,d,p, tokenIn)
-            resultArray.push({username: useri.username, score: result});
-            console.log(`${i}: ${followers[i]} = ${result}`)
+            const usernamei = followers[i];
+            let pageRank = await findScoreByDepthAndDampingFactor(usernamei, depth, df);
+            if(!pageRank){
+              const githubuser = await _callGitHub(usernamei,tokenIn);
+              result = await pageRankRecursive(githubuser,df,depth, tokenIn)
+              resultArray.push({username: usernamei, score: result});
+            } else {
+              result = pageRank
+              resultArray.push({username: usernamei, score: result});
+            };
+            console.log(`${i}: ${followers[i]} = ${result}`);
           }
         return resultArray;
     }
 
-    async function pageRankRecursive(user, d, p, tokenIn){
+    async function pageRankRecursive(user, df, depth, tokenIn){
       const followers = user.followers;
       const followersSize = followers.length;
       let pageRankSum = 0; // Creamos una variable para almacenar la sumatoria de los PageRank de los followers
-      if(p==0 || followersSize==0){ // Caso base -> profundidad máxima alcanzada o el usuario que estamos buscando tiene 0 followers
-        return (1-d)
+      if(depth==0 || followersSize==0){ // Caso base -> profundidad máxima alcanzada o el usuario que estamos buscando tiene 0 followers
+        const result = 1-df;
+        await findOneAndUpdate(user, depth, df, result);
+        return result;
       }else {
-        for(let i=0; i<followersSize; i++){
-          const useri = await _callGitHub(followers[i],tokenIn);
-          const followingOfi = useri.following.length;
-          const followerPageRank = await pageRankRecursive(useri, d, p-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
-          if(followingOfi==0){
-            pageRankSum += followerPageRank/1; // Si no sigue a nadie (hay admins en github que no siguen a nadie, pero pero aparecen en los seguidores de algunos usuarios)
-          }else {
-            pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower al sumatoria y dividimos entre su las personas a las que sigue
-          }
-        };
-        const pageRank = (1-d) + d*(pageRankSum); // Calculamos el PageRank del usuario actual usando la sumatoria de los PageRank de los followers
-        return pageRank;
+        let pageRank = await findScoreByDepthAndDampingFactor(user.username, depth, df);
+        if(!pageRank){
+          for(let i=0; i<followersSize; i++){
+              const userDatabase = await findOneUser(followers[i])
+
+              let followingOfi = 0;
+              let followerPageRank = 0;
+
+              if(!userDatabase){
+                const useri = await _callGitHub(followers[i],tokenIn);
+                
+                followingOfi = useri.following.length;
+                followerPageRank = await pageRankRecursive(useri, df, depth-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
+              } else {
+                followingOfi = userDatabase.following.length;
+                followerPageRank = await pageRankRecursive(userDatabase, df, depth-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
+              }
+         
+            if(followingOfi==0){
+              pageRankSum += followerPageRank/1; // Si no sigue a nadie (hay admins en github que no siguen a nadie, pero pero aparecen en los seguidores de algunos usuarios)
+            }else {
+              pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower al sumatoria y dividimos entre su las personas a las que sigue
+            }
+          };
+          let pageRank = (1-df) + df*(pageRankSum); // Calculamos el PageRank del usuario actual usando la sumatoria de los PageRank de los followers
+          
+          await findOneAndUpdate(user, depth, df, pageRank);
+
+          return pageRank;
+        } else{
+          return pageRank;
+        }
       }
     }
 
 
+    // Busca un usuario y comprueba si está en la base de datos, si no existe crea uno nuevo con los datos del followerRank calculado
+    // si sí está comprueba en primer lugar si está ya calculado, si lo está no hace nada, si no lo está introduce un nuevo followerRank
+    // para ese usuario
+    async function findOneAndUpdate(user, depth, dampingFactor, score) {
+      const filter = { username: user.username };
+      const existingUser = await User.findOne(filter);
+      
+      if (!existingUser) {
+          const user1 = await User.create({
+          username: user.username,
+          status: user.status ? user.status.message : null,
+          bio: user.bio,
+          avatarUrl: user.avatarUrl,
+          followers: user.followers,
+          following: user.following,
+          issues: user.issues,
+          followersRank: [{
+              depth: depth,
+              dampingfactor: dampingFactor,
+              date: new Date(),
+              score: score
+            }]
+        }); 
+        
+      } else {
+          const actualDate = new Date().getTime();
+
+          const rankExists = existingUser.followersRank.some(rank => {
+          const rankTime = new Date(rank.date).getTime();
+          return rank.depth === depth && rank.dampingfactor === dampingFactor && actualDate - rankTime < 7 * 24 * 60 * 60 * 1000;
+        });
+
+        if(!rankExists){
+          const update = {
+            $push: {
+              followersRank: {
+                depth: depth,
+                dampingfactor: dampingFactor,
+                date: new Date(),
+                score: score
+              }
+            }
+          };
+          const options = { new: true, upsert: true };
+          await User.findOneAndUpdate(filter, update, options);
+        }
+      }
+    }
+    
+    // comprueba si el usuario tiene el followerRank. Si lo tiene devuelve el resultado, si no devuelve falso
+    async function findScoreByDepthAndDampingFactor(usert, depth, dampingFactor) {
+      const user = await User.findOne({ username: usert });
+      if (!user) {
+        return false;
+      }
+    
+      const followersRank = user.followersRank;
+      const actualDate = new Date().getTime();
+      for (let i = 0; i < followersRank.length; i++) {
+        const rank = followersRank[i];
+        if (rank.depth === depth && rank.dampingfactor === dampingFactor && rank.date) {
+          const rankTime = new Date(rank.date).getTime();
+          if (actualDate - rankTime < 7 * 24 * 60 * 60 * 1000) { //milisegundo que dura una semana -> comprueba que el dato sea de antes de 1 semana
+            return rank.score;
+          }
+        }
+      }
+    
+      return false;
+    }
+
+    async function findOneUser(usert) {
+      const user = await User.findOne({ username: usert });
+      if (!user) {
+        return false;
+      } else
+      return user;
+    }

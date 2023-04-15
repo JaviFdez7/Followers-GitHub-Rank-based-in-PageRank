@@ -11,7 +11,8 @@ const userSchema = new mongoose.Schema({
             title: String,
             state: String,
             createdAt: String,
-        }]
+        }],
+    followersRank: [{depth: Number, dampingfactor: Number, date: Date, score: Number}]
 });
 
 export default mongoose.model("User", userSchema);
