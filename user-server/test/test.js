@@ -9,7 +9,7 @@ describe('PageRank function', () => {
     const dampingFactor = 0.85;
     const depth = 1;
     const token = process.env.TOKEN;
-    const result = await pageRank(username, dampingFactor, depth, token);
+    const result = await pageRank(username, dampingFactor, depth, token, false);
     assert.notStrictEqual(result, null);
-  }).timeout(20000);
+  }).timeout(60000);
 });

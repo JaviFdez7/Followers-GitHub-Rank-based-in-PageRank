@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const pageRankFollowersSchema = new mongoose.Schema({
     computationId: { type: String, required: true, unique: true },
-    status: String,
+    status: { type: String, default: "IN_PROGRESS" },
     params:  { type: 
         {
             username: String,

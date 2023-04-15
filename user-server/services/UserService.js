@@ -68,25 +68,20 @@ export function findInGithubByUsername(req, res) {
         computationId: computationId,
         status: "IN_PROGRESS",
         params: { username: username, dampingfactor: dampingFactor, depth: depth },
-        result: [{
-          depth: 0,
-          dampingfactor: dampingFactor,
-          date: new Date(),
-          score: 0.15
-        }]
+        result: []
       });
       res.status(201).send({computationId: computationId});
       console.log(`ComputationId send: ${computationId}`);
       try {
         console.log("PageRank in progress");
-  
+
         await PageRankFollowers.updateOne(
           { computationId: computationId },
           {
             $set: {
               status: "COMPLETED",
               params: { username: username, dampingfactor: dampingFactor, depth: depth },
-              result: await pageRank(username, dampingFactor, depth, tokenPred) 
+              result: await pageRank(username, dampingFactor, depth, tokenPred, true) 
             }
           }
         );
@@ -175,7 +170,7 @@ async function _callGitHub(username,tokenIn){
 
 
     //PageRank recursive function 
-    export async function pageRank(username, df, depth, tokenIn){
+    export async function pageRank(username, df, depth, tokenIn, database){
         const user = await _callGitHub(username,tokenIn)
         const followers = user.followers;
         const followersSize = followers.length; 
@@ -183,10 +178,13 @@ async function _callGitHub(username,tokenIn){
         let resultArray = [];
         for(let i=0;i<followersSize;i++){
             const usernamei = followers[i];
-            let pageRank = await findScoreByDepthAndDampingFactor(usernamei, depth, df);
+            let pageRank = false;
+            if(database){
+              pageRank = await findScoreByDepthAndDampingFactor(usernamei, depth, df);
+            }
             if(!pageRank){
               const githubuser = await _callGitHub(usernamei,tokenIn);
-              result = await pageRankRecursive(githubuser,df,depth, tokenIn)
+              result = await pageRankRecursive(githubuser,df,depth, tokenIn, database)
               resultArray.push({username: usernamei, score: result});
             } else {
               result = pageRank
@@ -197,19 +195,28 @@ async function _callGitHub(username,tokenIn){
         return resultArray;
     }
 
-    async function pageRankRecursive(user, df, depth, tokenIn){
+    async function pageRankRecursive(user, df, depth, tokenIn, database){
       const followers = user.followers;
       const followersSize = followers.length;
       let pageRankSum = 0; // Creamos una variable para almacenar la sumatoria de los PageRank de los followers
       if(depth==0 || followersSize==0){ // Caso base -> profundidad máxima alcanzada o el usuario que estamos buscando tiene 0 followers
         const result = 1-df;
-        await findOneAndUpdate(user, depth, df, result);
+        if(database){
+          await findOneAndUpdate(user, depth, df, result);
+        }
         return result;
       }else {
-        let pageRank = await findScoreByDepthAndDampingFactor(user.username, depth, df);
+        let pageRank = false;
+        if(database){
+          pageRank = await findScoreByDepthAndDampingFactor(user.username, depth, df);
+        }
+
         if(!pageRank){
           for(let i=0; i<followersSize; i++){
-              const userDatabase = await findOneUser(followers[i])
+              let userDatabase = false;
+              if(database){
+                userDatabase = await findOneUser(followers[i]);
+              };
 
               let followingOfi = 0;
               let followerPageRank = 0;
@@ -232,7 +239,9 @@ async function _callGitHub(username,tokenIn){
           };
           let pageRank = (1-df) + df*(pageRankSum); // Calculamos el PageRank del usuario actual usando la sumatoria de los PageRank de los followers
           
-          await findOneAndUpdate(user, depth, df, pageRank);
+          if (database){
+            await findOneAndUpdate(user, depth, df, pageRank);
+          }
 
           return pageRank;
         } else{
