@@ -161,9 +161,12 @@ components:
     followersRanking:
       type: object
       properties:
+        computationId:
+          type: string
+          nullable: false
         status:
           type: string
-          enum: [IN_PROGRESS, COMPLETED]
+          enum: [IN_PROGRESS, COMPLETED, FAILED]
         params:
           type: object
           properties:
@@ -200,6 +203,7 @@ components:
           - followers
           - following
           - issues
+          - followersRank
         properties:
           username:
             type: string
@@ -236,6 +240,25 @@ components:
                 createdAt:
                   type: string
                   format: date-time
+          followersRank:
+            type: array
+            items:
+              type: object
+              required:
+                - depth
+                - dampingfactor
+                - date
+                - score
+              properties:
+                depth:
+                  type: number
+                dampingfactor:
+                  type: number
+                date:
+                  type: string
+                  format: date-time
+                score: 
+                  type: number
     error:
       type: object
       required:

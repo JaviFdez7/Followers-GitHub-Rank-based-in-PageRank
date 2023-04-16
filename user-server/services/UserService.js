@@ -88,6 +88,11 @@ export function findInGithubByUsername(req, res) {
         console.log("Completed and updated");
       } catch (error) {
         console.log("Error updating the instance of PageRankFollowers: " + error);
+        await PageRankFollowers.updateOne(
+          { computationId: computationId },
+          { $set: { status: "FAILED" } }
+        );
+        console.log("Status set to FAILED");      
       }
     } catch (err) {
       res.status(500).send({ message: "Error creating the instance of PageRankFollowers: " + err.message });
@@ -170,23 +175,23 @@ async function _callGitHub(username,tokenIn){
 
 
     //PageRank recursive function 
-    export async function pageRank(username, df, depth, tokenIn, database){
+    export async function pageRank(username, df, depth, tokenIn, database){ // database = booleano: true -> con memoria; false -> sin memoria
         const user = await _callGitHub(username,tokenIn)
         const followers = user.followers;
         const followersSize = followers.length; 
         let result = 0;
         let resultArray = [];
-        for(let i=0;i<followersSize;i++){
+        for(let i=0;i<followersSize;i++){ //generar el resultado
             const usernamei = followers[i];
             let pageRank = false;
-            if(database){
-              pageRank = await findScoreByDepthAndDampingFactor(usernamei, depth, df);
+            if(database){ //Comprueba si la base de datos es activa
+              pageRank = await findScoreByDepthAndDampingFactor(usernamei, depth, df); 
             }
-            if(!pageRank){
+            if(!pageRank){ // Si no está en base de datos o si la base de datos no está conectada
               const githubuser = await _callGitHub(usernamei,tokenIn);
               result = await pageRankRecursive(githubuser,df,depth, tokenIn, database)
               resultArray.push({username: usernamei, score: result});
-            } else {
+            } else { // Si la base de datos está conectada y ha encontrado resultado
               result = pageRank
               resultArray.push({username: usernamei, score: result});
             };
@@ -201,32 +206,34 @@ async function _callGitHub(username,tokenIn){
       let pageRankSum = 0; // Creamos una variable para almacenar la sumatoria de los PageRank de los followers
       if(depth==0 || followersSize==0){ // Caso base -> profundidad máxima alcanzada o el usuario que estamos buscando tiene 0 followers
         const result = 1-df;
-        if(database){
+        if(database){ // Si la base de datos está conectada, actualiza/crea un usuario con esos datos y el resultado
           await findOneAndUpdate(user, depth, df, result);
         }
         return result;
       }else {
         let pageRank = false;
+
         if(database){
           pageRank = await findScoreByDepthAndDampingFactor(user.username, depth, df);
         }
 
-        if(!pageRank){
+        if(!pageRank){ // Si no está en base de datos o si la base de datos no está conectada
           for(let i=0; i<followersSize; i++){
               let userDatabase = false;
-              if(database){
+
+              if(database){ // Si la base de datos está conectada busca el usuario i
                 userDatabase = await findOneUser(followers[i]);
               };
 
               let followingOfi = 0;
               let followerPageRank = 0;
 
-              if(!userDatabase){
+              if(!userDatabase){ // Si la base de datos no está concectada o si no encontró el usuario en la base de datos
                 const useri = await _callGitHub(followers[i],tokenIn);
                 
                 followingOfi = useri.following.length;
                 followerPageRank = await pageRankRecursive(useri, df, depth-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
-              } else {
+              } else { // Usuario encontrado
                 followingOfi = userDatabase.following.length;
                 followerPageRank = await pageRankRecursive(userDatabase, df, depth-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
               }
@@ -234,7 +241,7 @@ async function _callGitHub(username,tokenIn){
             if(followingOfi==0){
               pageRankSum += followerPageRank/1; // Si no sigue a nadie (hay admins en github que no siguen a nadie, pero pero aparecen en los seguidores de algunos usuarios)
             }else {
-              pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower al sumatoria y dividimos entre su las personas a las que sigue
+              pageRankSum += followerPageRank/followingOfi; // Sumamos el PageRank del follower al sumatoria y dividimos entre las personas a las que sigue
             }
           };
           let pageRank = (1-df) + df*(pageRankSum); // Calculamos el PageRank del usuario actual usando la sumatoria de los PageRank de los followers
@@ -276,9 +283,9 @@ async function _callGitHub(username,tokenIn){
         }); 
         
       } else {
-          const actualDate = new Date().getTime();
+        const actualDate = new Date().getTime();
 
-          const rankExists = existingUser.followersRank.some(rank => {
+        const rankExists = existingUser.followersRank.some(rank => {
           const rankTime = new Date(rank.date).getTime();
           return rank.depth === depth && rank.dampingfactor === dampingFactor && actualDate - rankTime < 7 * 24 * 60 * 60 * 1000;
         });
@@ -322,6 +329,7 @@ async function _callGitHub(username,tokenIn){
       return false;
     }
 
+    // Busca un usuario por su nombre y devuelve false si no lo encuentra o el usuario si si lo encuentra
     async function findOneUser(usert) {
       const user = await User.findOne({ username: usert });
       if (!user) {
