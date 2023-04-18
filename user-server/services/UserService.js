@@ -80,7 +80,6 @@ export function findInGithubByUsername(req, res) {
           {
             $set: {
               status: "COMPLETED",
-              params: { username: username, dampingfactor: dampingFactor, depth: depth },
               result: await pageRank(username, dampingFactor, depth, tokenPred, true) 
             }
           }
