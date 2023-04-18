@@ -20,7 +20,7 @@ program
     const depth = options.depth || 3;
     const tokenPred = process.env.TOKEN;
     const token = options.token || tokenPred;
-    const database = false
+    const database = false;
     console.log(`\nCalculating PageRank of ${username} with damping factor ${dampingFactor} and depth ${depth} to ${options.output? options.output : 'stdout'}...\n`);
     const rankingFollowers = await pageRank(username, dampingFactor, depth, token, database);
     if (options.output) {

@@ -13,4 +13,6 @@ const pageRankFollowersSchema = new mongoose.Schema({
     result: [{ username: String, score: Number }]
 });
 
+pageRankFollowersSchema.index({ computationId: 1 }, { unique: true });
+
 export default mongoose.model("PageRankFollowers", pageRankFollowersSchema);

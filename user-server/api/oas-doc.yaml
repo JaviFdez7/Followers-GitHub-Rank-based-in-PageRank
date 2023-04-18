@@ -212,6 +212,7 @@ components:
             nullable: true
           bio:
             type: string
+            nullable: true
           avatarUrl:
             type: string
             format: uri
