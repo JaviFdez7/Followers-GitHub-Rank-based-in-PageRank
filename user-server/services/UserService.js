@@ -117,7 +117,7 @@ export function findInGithubByUsername(req, res) {
   
 
 //User info from graphQL 
-async function _callGitHub(username,tokenIn){
+export async function _callGitHub(username,tokenIn){
     const token = tokenIn;
     const apiUrl = 'https://api.github.com/graphql';
     const requestConfig = { Authorization: "Bearer " + token, Accept: 'application/vnd.github.starfox-preview+json' };
