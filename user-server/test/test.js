@@ -3,8 +3,8 @@ import assert from 'assert';
 import dotenv from 'dotenv';
 dotenv.config();
 
-describe('PageRank function', () => {
-  it('should compute the PageRank of a user', async () => {
+describe('PageRank result non null', () => {
+  it('Should compute the PageRank of a user', async () => {
     const username = 'alesancor1';
     const dampingFactor = 0.85;
     const depth = 1;
@@ -14,8 +14,8 @@ describe('PageRank function', () => {
   }).timeout(60000);
 });
 
-describe('PageRank function', () => {
-  it('should compute the PageRank of a user', async () => {
+describe('PageRank result length higher than 0', () => {
+  it('Should compute the PageRank of a user', async () => {
     const username = 'MaToSan24';
     const dampingFactor = 0.85;
     const depth = 1;
@@ -25,8 +25,8 @@ describe('PageRank function', () => {
   }).timeout(60000);
 });
 
-describe('PageRank function', () => {
-  it('should compute the PageRank of a user', async () => {
+describe('PageRank result length strict equal to the number of followers', () => {
+  it('Should compute the PageRank of a user', async () => {
     const username = 'josemgarcia';
     const dampingFactor = 0.85;
     const depth = 1;
@@ -38,8 +38,8 @@ describe('PageRank function', () => {
   }).timeout(60000);
 });
 
-describe('PageRank function', () => {
-  it('should compute the PageRank of a user', async () => {
+describe('PageRank result length strict equal to the number of followers', () => {
+  it('Should compute the PageRank of a user', async () => {
     const username = 'pafmon';
     const dampingFactor = 0.85;
     const depth = 1;
