@@ -200,6 +200,7 @@ export async function _callGitHub(username,tokenIn){
     }
 
     async function pageRankRecursive(user, df, depth, tokenIn, database){
+      
       const followers = user.followers;
       const followersSize = followers.length;
       let pageRankSum = 0; // Creamos una variable para almacenar la sumatoria de los PageRank de los followers
@@ -231,10 +232,10 @@ export async function _callGitHub(username,tokenIn){
                 const useri = await _callGitHub(followers[i],tokenIn);
                 
                 followingOfi = useri.following.length;
-                followerPageRank = await pageRankRecursive(useri, df, depth-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
+                followerPageRank = await pageRankRecursive(useri, df, depth-1, tokenIn, database); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
               } else { // Usuario encontrado
                 followingOfi = userDatabase.following.length;
-                followerPageRank = await pageRankRecursive(userDatabase, df, depth-1, tokenIn); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
+                followerPageRank = await pageRankRecursive(userDatabase, df, depth-1, tokenIn, database); // Llamamos de forma recursiva a la función para obtener el PageRank del follower
               }
          
             if(followingOfi==0){
@@ -244,7 +245,6 @@ export async function _callGitHub(username,tokenIn){
             }
           };
           let pageRank = (1-df) + df*(pageRankSum); // Calculamos el PageRank del usuario actual usando la sumatoria de los PageRank de los followers
-          
           if (database){
             await findOneAndUpdate(user, depth, df, pageRank);
           }
@@ -265,7 +265,7 @@ export async function _callGitHub(username,tokenIn){
       const existingUser = await User.findOne(filter);
       
       if (!existingUser) {
-          const user1 = await User.create({
+          await User.create({
           username: user.username,
           status: user.status ? user.status.message : null,
           bio: user.bio,
